@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AR Video</title><script src="//cdn.8thwall.com/web/xrextras/xrextras.js"></script><script src="//cdn.8thwall.com/web/aframe/aframe.min.js"></script></head><body><a-scene xrweb xrextras-loading xrextras-runtime-error><a-assets><video id="vid" src="https://www.w3schools.com/html/mov_bbb.mp4" preload="auto" loop muted autoplay playsinline webkit-playsinline></video></a-assets><a-entity xrextras-named-image-target="name: vikas"><a-video src="#vid" width="1" height="0.6" position="0 0 0"></a-video></a-entity></a-scene><script>const video = document.querySelector('#vid')
+
+        // 🔥 Force unlock on tap (THIS fixes your issue)
+        document.body.addEventListener('click', () => {
+            video.play().then(() => video.pause()).catch(() => {})
+        }, {
+            once: true
+        })
+
+        document.addEventListener('xrextrasimagefound', () => {
+            console.log('FOUND')
+            video.play()
+        })
+
+        document.addEventListener('xrextrasimagelost', () => {
+            console.log('LOST')
+            video.pause()
+        })</script></body></html>
