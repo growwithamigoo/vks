@@ -1,18 +1,79 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AR Video</title><script src="//cdn.8thwall.com/web/xrextras/xrextras.js"></script><script src="//cdn.8thwall.com/web/aframe/aframe.min.js"></script></head><body><a-scene xrweb xrextras-loading xrextras-runtime-error><a-assets><video id="vid" src="https://www.w3schools.com/html/mov_bbb.mp4" preload="auto" loop muted autoplay playsinline webkit-playsinline></video></a-assets><a-entity xrextras-named-image-target="name: vikas"><a-video src="#vid" width="1" height="0.6" position="0 0 0"></a-video></a-entity></a-scene><script>const video = document.querySelector('#vid')
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>AR Video Tracking</title>
+  
+  <!-- 8th Wall Scripts (Note: You may need to add your appKey if not self-hosted through Cloud Editor) -->
+  <script src="//cdn.8thwall.com/web/xrextras/xrextras.js"></script>
+  <script src="//cdn.8thwall.com/web/aframe/aframe.min.js"></script>
+  
+  <script>
+    // Component to handle video play/pause on image target tracking
+    AFRAME.registerComponent('video-handler', {
+      init: function () {
+        const video = document.querySelector('#vid');
+        
+        // Touchstart unlock for mobile autoplay
+        document.body.addEventListener('touchstart', () => {
+          video.play().then(() => video.pause()).catch((err) => {
+            console.warn('Video play failed:', err);
+          });
+        }, { once: true });
+        
+        // Event listeners for image tracking
+        this.el.addEventListener('xrimagefound', () => {
+          console.log('Image target found');
+          video.play();
+        });
+        
+        this.el.addEventListener('xrimagelost', () => {
+          console.log('Image target lost');
+          video.pause();
+        });
+      }
+    });
+  </script>
+</head>
+<body>
+  <!-- WebAR Scene -->
+  <a-scene
+    xrweb
+    xrextras-loading
+    xrextras-runtime-error
+    xrextras-gesture-detector>
+    
+    <!-- Assets -->
+    <a-assets>
+      <video
+        id="vid"
+        src="https://www.w3schools.com/html/mov_bbb.mp4"
+        preload="auto"
+        crossorigin="anonymous"
+        loop
+        muted
+        autoplay
+        playsinline
+        webkit-playsinline>
+      </video>
+    </a-assets>
+    
+    <!-- Camera -->
+    <a-camera position="0 4 10" raycaster="objects: .cantap"></a-camera>
 
-        // 🔥 Force unlock on tap (THIS fixes your issue)
-        document.body.addEventListener('click', () => {
-            video.play().then(() => video.pause()).catch(() => {})
-        }, {
-            once: true
-        })
-
-        document.addEventListener('xrextrasimagefound', () => {
-            console.log('FOUND')
-            video.play()
-        })
-
-        document.addEventListener('xrextrasimagelost', () => {
-            console.log('LOST')
-            video.pause()
-        })</script></body></html>
+    <!-- Image Target Entity -->
+    <a-entity xrextras-named-image-target="name: vikas" video-handler>
+      <!-- Video Overlay -->
+      <a-video
+        src="#vid"
+        width="1"
+        height="0.6"
+        position="0 0 0"
+        rotation="0 0 0">
+      </a-video>
+    </a-entity>
+    
+  </a-scene>
+</body>
+</html>
