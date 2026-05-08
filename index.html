@@ -1,80 +1,138 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MindAR WebAR Image Tracking</title>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <!-- MindAR Image Tracking for A-Frame -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+    
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      /* UI Overlay to unlock video autoplay on mobile */
+      #overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.85);
+        z-index: 999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        text-align: center;
+      }
+      #startButton {
+        padding: 16px 32px;
+        font-size: 18px;
+        font-weight: bold;
+        color: white;
+        background-color: #007bff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        transition: background-color 0.2s;
+      }
+      #startButton:hover {
+        background-color: #0056b3;
+      }
+      .instructions {
+        color: white;
+        margin-top: 20px;
+        max-width: 80%;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- User interaction overlay to satisfy mobile browser autoplay policies -->
+    <div id="overlay">
+      <button id="startButton">Tap to Start AR</button>
+      <div class="instructions">
+        <p>1. Allow Camera access when prompted.</p>
+        <p>2. Point your camera at the target card.</p>
+      </div>
+    </div>
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <title>AR Video Tracking</title>
+    <!-- MindAR Scene Setup -->
+    <!-- `autoStart: false` prevents the camera from starting until the user taps the button -->
+    <!-- `imageTargetSrc` should point to your compiled .mind file -->
+    <a-scene 
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;" 
+      color-space="sRGB" 
+      renderer="colorManagement: true, physicallyCorrectLights" 
+      vr-mode-ui="enabled: false" 
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-assets>
+        <!-- The video asset. `playsinline` and `webkit-playsinline` are critical for iOS. -->
+        <!-- Start `muted` to ensure mobile compatibility, you can optionally provide a mute toggle later -->
+        <video 
+          id="vid" 
+          src="./video.mp4" 
+          playsinline 
+          webkit-playsinline 
+          muted 
+          loop 
+          crossorigin="anonymous"
+        ></video>
+      </a-assets>
 
-    <!-- 8th Wall Scripts -->
-    <!-- REPLACE "YOUR_APP_KEY" WITH YOUR ACTUAL 8TH WALL APP KEY 
-    <script src="//apps.8thwall.com/xrweb?appKey=YOUR_APP_KEY"></script>
-    -->
-    <script src="//cdn.8thwall.com/web/xrextras/xrextras.js"></script>
-    <script src="//cdn.8thwall.com/web/aframe/aframe.min.js"></script>
-</head>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-<body>
-    <!-- WebAR Scene -->
-    <a-scene xrweb xrextras-loading xrextras-runtime-error xrextras-gesture-detector>
-
-        <!-- Assets -->
-        <a-assets>
-            <video id="vid" src="https://www.w3schools.com/html/mov_bbb.mp4" preload="auto" crossorigin="anonymous" loop muted playsinline webkit-playsinline>
-      </video>
-        </a-assets>
-
-        <!-- Camera -->
-        <a-camera position="0 4 10" raycaster="objects: .cantap"></a-camera>
-
-        <!-- Image Target Entity -->
-        <a-entity xrextras-named-image-target="name: vikas" id="image-target">
-            <!-- Video Overlay -->
-            <a-video src="#vid" width="1" height="0.6" position="0 0 0" rotation="0 0 0">
-            </a-video>
-        </a-entity>
-
+      <!-- Target definition: targetIndex: 0 maps to the first image inside targets.mind -->
+      <a-entity mindar-image-target="targetIndex: 0" id="target">
+        <!-- Display the video. Adjust width/height to match your target card's aspect ratio -->
+        <!-- Example: 3.5" x 2" business card is 1.75 width / 1 height -->
+        <!-- Example: 16:9 video is 1.77 width / 1 height -->
+        <a-video src="#vid" position="0 0 0" width="1" height="0.5625" rotation="0 0 0"></a-video>
+      </a-entity>
     </a-scene>
 
-    <button id="startBtn" style="
-  position:fixed;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  z-index:9999;
-  padding:15px 30px;
-  font-size:20px;">
-  Start AR
-  </button>
-
     <script>
-        const video = document.querySelector('#vid')
-        const btn = document.querySelector('#startBtn')
-        const imageTarget = document.querySelector('#image-target')
+      document.addEventListener("DOMContentLoaded", () => {
+        const sceneEl = document.querySelector('a-scene');
+        const startButton = document.querySelector('#startButton');
+        const overlay = document.querySelector('#overlay');
+        const target = document.querySelector('#target');
+        const video = document.querySelector('#vid');
 
-        btn.addEventListener('click', async() => {
-            try {
-                await video.play()
-                video.pause()
-                video.currentTime = 0
+        // Step 1: User interaction unlocks video playback capabilities
+        startButton.addEventListener('click', () => {
+          overlay.style.display = 'none'; // Hide UI
+          
+          // Trick to unlock video on mobile browsers
+          // We play the video silently once upon user gesture, then pause it immediately
+          video.play().then(() => {
+            video.pause();
+          }).catch((err) => {
+             console.warn("Video play error (usually expected if not loaded yet):", err);
+          });
 
-                btn.style.display = 'none'
+          // Start the AR engine and request camera permissions
+          sceneEl.systems["mindar-image-system"].start();
+        });
 
-                console.log('Unlocked')
-            } catch (e) {
-                console.log(e)
-            }
-        })
+        // Step 2: Play video when target is visible
+        target.addEventListener("targetFound", () => {
+          console.log("Target image detected!");
+          video.play();
+        });
 
-        // Hooking to the correct image target element
-        imageTarget.addEventListener('xrimagefound', () => {
-            video.play()
-        })
-
-        imageTarget.addEventListener('xrimagelost', () => {
-            video.pause()
-        })
+        // Step 3: Pause video immediately when target is lost
+        target.addEventListener("targetLost", () => {
+          console.log("Target image lost!");
+          video.pause();
+        });
+      });
     </script>
-</body>
-
+  </body>
 </html>
